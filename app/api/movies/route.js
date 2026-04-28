@@ -11,10 +11,26 @@ function toTitleCase(str) {
 }
 
 const cinemaData = {
-  'BAKOURA': { name: 'ΒΑΚΟΥΡΑ', map: 'https://www.google.com/maps/search/?api=1&query=Βακούρα+Κινηματογράφος+Θεσσαλονίκη' },
-  'MAKEDONIKON': { name: 'ΜΑΚΕΔΟΝΙΚΟΝ', map: 'https://www.google.com/maps/search/?api=1&query=Μακεδονικόν+Κινηματογράφος+Θεσσαλονίκη' },
-  'KOLOSSAION': { name: 'ΚΟΛΟΣΣΑΙΟΝ', map: 'https://www.google.com/maps/search/?api=1&query=Κολοσσαίον+Κινηματογράφος+Θεσσαλονίκη' },
-  'OLYMPION': { name: 'ΟΛΥΜΠΙΟΝ', map: 'https://maps.app.goo.gl/EBYrRVxNTpSDBg9d9' }
+  'BAKOURA': { 
+    name: 'ΒΑΚΟΥΡΑ', 
+    map: 'https://www.google.com/maps/search/?api=1&query=Βακούρα+Κινηματογράφος+Θεσσαλονίκη',
+    tickets: 'https://www.more.com/gr-el/tickets/cinema/kinimatografos-bakoura/'
+  },
+  'MAKEDONIKON': { 
+    name: 'ΜΑΚΕΔΟΝΙΚΟΝ', 
+    map: 'https://www.google.com/maps/search/?api=1&query=Μακεδονικόν+Κινηματογράφος+Θεσσαλονίκη',
+    tickets: 'https://www.more.com/gr-el/tickets/cinema/festival/kinimatografos-makedonikon/'
+  },
+  'KOLOSSAION': { 
+    name: 'ΚΟΛΟΣΣΑΙΟΝ', 
+    map: 'https://www.google.com/maps/search/?api=1&query=Κολοσσαίον+Κινηματογράφος+Θεσσαλονίκη',
+    tickets: 'https://www.more.com/gr-el/tickets/cinema/kinimatografos-kolossaion/'
+  },
+  'OLYMPION': { 
+    name: 'ΟΛΥΜΠΙΟΝ', 
+    map: 'https://maps.app.goo.gl/EBYrRVxNTpSDBg9d9',
+    tickets: 'https://www.more.com/gr-el/venues/filmfestival/'
+  }
 };
 
 export async function GET() {
@@ -76,6 +92,7 @@ export async function GET() {
           allMovies.push({
             cinema: cinemaData[cinema.id].name,
             cinemaMap: cinemaData[cinema.id].map,
+            ticketsUrl: cinemaData[cinema.id].tickets, // <--- ΠΡΟΣΘΕΣΕ ΑΥΤΟ
             title: title,
             image: image,
             schedule: schedule,
