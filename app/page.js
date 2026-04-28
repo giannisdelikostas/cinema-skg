@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 
 export default function CinemaApp() {
   const [movies, setMovies] = useState([]);
-  const [activeTab, setActiveTab] = useState('ΒΑΚΟΥΡΑ');
+  const [activeTab, setActiveTab] = useState('ΟΛΥΜΠΙΟΝ');
   const [selectedDay, setSelectedDay] = useState('');
   const [availableDays, setAvailableDays] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const cinemaTabs = ['ΒΑΚΟΥΡΑ', 'ΜΑΚΕΔΟΝΙΚΟΝ', 'ΚΟΛΟΣΣΑΙΟΝ', 'ΟΛΥΜΠΙΟΝ'];
+  const cinemaTabs = ['ΟΛΥΜΠΙΟΝ', 'ΒΑΚΟΥΡΑ', 'ΜΑΚΕΔΟΝΙΚΟΝ', 'ΚΟΛΟΣΣΑΙΟΝ'];
 
   const sortAndFilterDays = (daysArray) => {
     const now = new Date();
