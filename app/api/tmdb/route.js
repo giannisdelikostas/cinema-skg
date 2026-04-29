@@ -8,24 +8,32 @@ export async function GET(request) {
     return NextResponse.json({ error: 'No title provided' }, { status: 400 });
   }
 
-  // 1. ΚΑΘΑΡΙΣΜΟΣ: Παίρνουμε μόνο τον τίτλο πριν την παρένθεση
+  // 1. ΠΟΛΥ ΚΑΛΟΣ ΚΑΘΑΡΙΣΜΟΣ
+  // Βγάζουμε παρενθέσεις, παύλες και λέξεις κλειδιά που μπερδεύουν το TMDB
   let cleanTitle = originalTitle
     .split('(')[0]
     .split('-')[0]
-    .replace('GR', '')
-    .replace('SUB', '')
+    .replace(/GR/gi, '')
+    .replace(/SUB/gi, '')
+    .replace(/ μεταγλ\./gi, '')
     .trim();
 
   const API_KEY = '9cc00684d688a9c71e678438c5ec854f'; 
 
   try {
-    // Πρώτη προσπάθεια αναζήτησης
-    let searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanTitle)}&include_adult=false`);
+    // Δοκιμή 1: Αναζήτηση με τον καθαρό τίτλο
+    let searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanTitle)}&include_adult=false&language=el-GR`);
     let searchData = await searchRes.json();
     
-    // 2. FALLBACK SEARCH: Αν δεν βρει τίποτα, δοκίμασε μόνο με τις πρώτες 3 λέξεις
+    // Δοκιμή 2: Αν δεν βρει στα Ελληνικά, ψάξε γενικά (χωρίς language constraint)
     if (!searchData.results || searchData.results.length === 0) {
-        const shorterTitle = cleanTitle.split(' ').slice(0, 3).join(' ');
+        searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(cleanTitle)}&include_adult=false`);
+        searchData = await searchRes.json();
+    }
+
+    // Δοκιμή 3: Fallback στις πρώτες 2 λέξεις (πολύ αποτελεσματικό για μεγάλους τίτλους)
+    if (!searchData.results || searchData.results.length === 0) {
+        const shorterTitle = cleanTitle.split(' ').slice(0, 2).join(' ');
         searchRes = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(shorterTitle)}&include_adult=false`);
         searchData = await searchRes.json();
     }
@@ -36,15 +44,15 @@ export async function GET(request) {
 
     const movie = searchData.results[0];
 
-    // 3. Λεπτομέρειες στα Ελληνικά
+    // Φέρνουμε λεπτομέρειες (Credits + Details)
     const detailsRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${API_KEY}&language=el-GR&append_to_response=credits`);
     let detailsData = await detailsRes.json();
 
-    // 4. FALLBACK ΓΛΩΣΣΑΣ: Αν η περίληψη είναι άδεια, φέρε τα Αγγλικά
+    // Αν η περίληψη είναι άδεια στα Ελληνικά, φέρε τα Αγγλικά
     if (!detailsData.overview || detailsData.overview.length < 10) {
       const engRes = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}?api_key=${API_KEY}&language=en-US`);
       const engData = await engRes.json();
-      detailsData.overview = engData.overview ? engData.overview + " [Μετάφραση μη διαθέσιμη]" : "Δεν βρέθηκε περίληψη.";
+      detailsData.overview = engData.overview || "Δεν βρέθηκε περίληψη.";
     }
 
     return NextResponse.json({
