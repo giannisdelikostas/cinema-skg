@@ -46,14 +46,16 @@ export default function CinemaApp() {
         
         const now = new Date();
         now.setHours(0, 0, 0, 0);
-        const sorted = Array.from(daysSet).sort((a, b) => {
-          const partsA = a.split(' ')[1].split('/');
-          const partsB = b.split(' ')[1].split('/');
-          return new Date(2026, partsA[1] - 1, partsA[0]) - new Date(2026, partsB[1] - 1, partsB[0]);
-        }).filter(day => {
-          const parts = day.split(' ')[1].split('/');
-          return new Date(2026, parts[1] - 1, parts[0]) >= now;
-        });
+        const currentYear = new Date().getFullYear();
+
+const sorted = Array.from(daysSet).sort((a, b) => {
+  const partsA = a.split(' ')[1].split('/');
+  const partsB = b.split(' ')[1].split('/');
+  return new Date(currentYear, partsA[1] - 1, partsA[0]) - new Date(currentYear, partsB[1] - 1, partsB[0]);
+}).filter(day => {
+  const parts = day.split(' ')[1].split('/');
+  return new Date(currentYear, parts[1] - 1, parts[0]) >= now;
+});
 
         setAvailableDays(sorted);
         const elDays = ['Κυ', 'Δε', 'Τρ', 'Τε', 'Πε', 'Πα', 'Σα'];
@@ -90,6 +92,8 @@ export default function CinemaApp() {
     setCurrentIndex(newIndex);
     fetchTMDB(filteredMovies[newIndex].title);
   };
+
+  
 
   const getCurrentCinemaLogo = (cinemaName) => cinemaTabs.find(tab => tab.name === cinemaName)?.logo || '';
 
@@ -190,7 +194,7 @@ export default function CinemaApp() {
       </div>
 
       <footer className="max-w-3xl mx-auto py-32 text-center relative z-10">
-        <div className="opacity-20 text-[10px] font-black tracking-[0.6em] mb-6">&copy; 2026 {cleanGreek('Cinema SKG')}</div>
+        <div className="opacity-20 text-[10px] font-black tracking-[0.6em] mb-6">&copy; {new Date().getFullYear()} {cleanGreek('Cinema SKG')}</div>
         <a href="https://www.instagram.com/alli.mia.selida.gia.tainies/" target="_blank" rel="noopener" className="opacity-20 hover:opacity-100 hover:text-yellow-500 transition-all text-[11px] font-[900] tracking-widest uppercase border border-white/5 px-6 py-3 rounded-full hover:bg-white/5">alli mia selida gia tainies</a>
       </footer>
 

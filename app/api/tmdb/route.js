@@ -16,7 +16,7 @@ export async function GET(request) {
     .replace('SUB', '')
     .trim();
 
-  const API_KEY = '9cc00684d688a9c71e678438c5ec854f'; 
+  const API_KEY = process.env.TMDB_API_KEY; 
 
   try {
     // Πρώτη προσπάθεια αναζήτησης

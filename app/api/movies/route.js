@@ -41,9 +41,10 @@ export async function GET() {
     { id: 'OLYMPION', url: 'https://www.thessalonikiguide.gr/cinemas/olympion/' }
   ];
 
-  try {
-    let allMovies = [];
-    for (const cinema of cinemas) {
+  let allMovies = [];
+
+  for (const cinema of cinemas) {
+    try {
       const response = await fetch(cinema.url, { cache: 'no-store' });
       const html = await response.text();
       const $ = cheerio.load(html);
@@ -54,13 +55,11 @@ export async function GET() {
 
         const title = toTitleCase(rawTitle);
         
-        // ΒΕΛΤΙΩΣΗ ΠΟΙΟΤΗΤΑΣ ΕΙΚΟΝΑΣ
         let image = $(el).find('img.wp-post-image').attr('data-lazy-src') || 
                     $(el).find('img.wp-post-image').attr('src') || 
                     $(el).find('img').attr('src');
         
         if (image) {
-          // Αφαιρούμε τα patterns μεγέθους (π.χ. -150x150, -300x200) για να πάρουμε την αυθεντική εικόνα
           image = image.replace(/-(\d+)x(\d+)\.(jpg|jpeg|png|webp)$/i, '.$3');
         }
 
@@ -92,7 +91,7 @@ export async function GET() {
           allMovies.push({
             cinema: cinemaData[cinema.id].name,
             cinemaMap: cinemaData[cinema.id].map,
-            ticketsUrl: cinemaData[cinema.id].tickets, // <--- ΠΡΟΣΘΕΣΕ ΑΥΤΟ
+            ticketsUrl: cinemaData[cinema.id].tickets,
             title: title,
             image: image,
             schedule: schedule,
@@ -101,9 +100,11 @@ export async function GET() {
           });
         }
       });
+
+    } catch (error) {
+      console.error(`Αποτυχία για ${cinema.id}:`, error);
     }
-    return NextResponse.json(allMovies);
-  } catch (error) {
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
+
+  return NextResponse.json(allMovies);
 }
