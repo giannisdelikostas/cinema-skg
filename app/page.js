@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-// Helper function για κεφαλαία χωρίς τόνους
 const cleanGreek = (str) => {
   if (!str) return '';
   return str.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
@@ -9,18 +8,21 @@ const cleanGreek = (str) => {
 
 export default function CinemaApp() {
   const [movies, setMovies] = useState([]);
-  const [activeTab, setActiveTab] = useState('ΟΛΥΜΠΙΟΝ');
+  const [activeTab, setActiveTab] = useState('ΑΠΟΛΛΩΝ');
   const [selectedDay, setSelectedDay] = useState('');
   const [availableDays, setAvailableDays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
-
   const [currentIndex, setCurrentIndex] = useState(null);
   const [tmdbInfo, setTmdbInfo] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
   const cinemaTabs = [
+    { name: 'ΑΠΟΛΛΩΝ', logo: '/logo-apollon.png' },
+    { name: 'ΝΑΤΑΛΙ', logo: '/logo-natali.png' },
+    { name: 'ΕΛΛΗΝΙΣ', logo: '/logo-ellinis.png' },
+    { name: 'CINE ΑΛΕΞ', logo: '/logo-alex.png' },
     { name: 'ΟΛΥΜΠΙΟΝ', logo: '/logo-olympion.png' },
     { name: 'ΒΑΚΟΥΡΑ', logo: '/logo-bakoura.png' },
     { name: 'ΜΑΚΕΔΟΝΙΚΟΝ', logo: '/logo-makedonikon.png' },
@@ -43,19 +45,18 @@ export default function CinemaApp() {
         setMovies(data);
         const daysSet = new Set();
         data.forEach(m => Object.keys(m.schedule).forEach(d => daysSet.add(d)));
-        
         const now = new Date();
         now.setHours(0, 0, 0, 0);
         const currentYear = new Date().getFullYear();
 
-const sorted = Array.from(daysSet).sort((a, b) => {
-  const partsA = a.split(' ')[1].split('/');
-  const partsB = b.split(' ')[1].split('/');
-  return new Date(currentYear, partsA[1] - 1, partsA[0]) - new Date(currentYear, partsB[1] - 1, partsB[0]);
-}).filter(day => {
-  const parts = day.split(' ')[1].split('/');
-  return new Date(currentYear, parts[1] - 1, parts[0]) >= now;
-});
+        const sorted = Array.from(daysSet).sort((a, b) => {
+          const partsA = a.split(' ')[1].split('/');
+          const partsB = b.split(' ')[1].split('/');
+          return new Date(currentYear, partsA[1] - 1, partsA[0]) - new Date(currentYear, partsB[1] - 1, partsB[0]);
+        }).filter(day => {
+          const parts = day.split(' ')[1].split('/');
+          return new Date(currentYear, parts[1] - 1, parts[0]) >= now;
+        });
 
         setAvailableDays(sorted);
         const elDays = ['Κυ', 'Δε', 'Τρ', 'Τε', 'Πε', 'Πα', 'Σα'];
@@ -93,8 +94,6 @@ const sorted = Array.from(daysSet).sort((a, b) => {
     fetchTMDB(filteredMovies[newIndex].title);
   };
 
-  
-
   const getCurrentCinemaLogo = (cinemaName) => cinemaTabs.find(tab => tab.name === cinemaName)?.logo || '';
 
   return (
@@ -129,12 +128,12 @@ const sorted = Array.from(daysSet).sort((a, b) => {
         </div>
       </div>
 
-      {/* Cinema Tabs */}
-      <div className="max-w-3xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2 mb-16 bg-white/5 backdrop-blur-2xl border border-white/10 p-2 rounded-[2.5rem] md:rounded-full relative z-10">
+      {/* Cinema Tabs - ΕΠΑΝΑΦΟΡΑ ΣΕ screenshot_60 στυλ */}
+      <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-2 mb-16 bg-white/5 backdrop-blur-2xl border border-white/10 p-2 rounded-[2.5rem] md:rounded-full relative z-10">
         {cinemaTabs.map(tab => (
           <button key={tab.name} onClick={() => setActiveTab(tab.name)}
             className={`py-4 px-6 rounded-full text-[10px] font-[900] tracking-[0.15em] transition-all flex items-center justify-center md:justify-start gap-3 cursor-pointer uppercase ${
-              activeTab === tab.name ? 'bg-white/10 text-yellow-500 shadow-xl' : 'text-white/30 hover:text-white/60'
+              activeTab === tab.name ? 'bg-white/10 text-yellow-500 shadow-xl border border-white/10' : 'text-white/30 hover:text-white/60 border border-transparent'
             }`}>
                 <img src={tab.logo} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10"/>
                 <span>{cleanGreek(tab.name)}</span>
@@ -149,22 +148,15 @@ const sorted = Array.from(daysSet).sort((a, b) => {
         ) : filteredMovies.length > 0 ? (
           filteredMovies.map((m, i) => (
             <div key={i} className="group bg-white/[0.02] border border-white/10 p-6 md:p-10 rounded-[3rem] md:rounded-[4rem] flex flex-col md:flex-row items-center gap-8 md:gap-12 hover:bg-white/[0.05] transition-all duration-700 relative overflow-hidden">
-              
-              {/* MOBILE HEADER: Logo + Name + Time (Visible only on Mobile) */}
               <div className="flex md:hidden flex-col items-center mb-2 text-center w-full">
                 <img src={getCurrentCinemaLogo(m.cinema)} alt="" className="w-12 h-12 rounded-full object-cover border border-white/10 mb-3"/>
                 <p className="text-[10px] font-black text-yellow-500 tracking-[0.3em] italic uppercase mb-1">{cleanGreek(m.cinema)}</p>
                 <p className="text-white font-[900] text-3xl tracking-tighter mb-4">{m.schedule[selectedDay]}</p>
               </div>
-
-              {/* Poster */}
               <div className="w-48 h-64 md:w-52 md:h-72 bg-zinc-900 rounded-[2.5rem] md:rounded-[3rem] overflow-hidden flex-shrink-0 shadow-2xl relative border border-white/10 cursor-pointer" onClick={() => openInfoModal(i)}>
                 <img src={m.image} className="w-full h-full object-cover group-hover:scale-110 transition-all duration-[1.5s]" alt=""/>
               </div>
-
               <div className="flex-grow text-center md:text-left w-full">
-                
-                {/* DESKTOP HEADER: Logo + Cinema + TIME (Hidden on Mobile) */}
                 <div className="hidden md:flex items-center gap-4 mb-6 bg-white/5 p-5 rounded-full border border-white/5 max-w-fit mx-auto md:mx-0">
                   <img src={getCurrentCinemaLogo(m.cinema)} alt="" className="w-12 h-12 rounded-full object-cover border border-white/10"/>
                   <div className="flex items-center gap-4">
@@ -172,10 +164,7 @@ const sorted = Array.from(daysSet).sort((a, b) => {
                     <p className="text-white font-[900] text-2xl tracking-tighter leading-none">{m.schedule[selectedDay]}</p>
                   </div>
                 </div>
-
                 <h3 onClick={() => openInfoModal(i)} className="font-[900] text-4xl leading-[1.1] group-hover:text-yellow-500 transition-colors duration-500 mb-8 cursor-pointer tracking-tight">{m.title}</h3>
-                
-                {/* ACTION BUTTONS: Same row on all devices */}
                 <div className="flex flex-row justify-center md:justify-start items-center gap-2 md:gap-4 w-full">
                   <a href={m.youtubeUrl} target="_blank" rel="noopener" className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-white/5 border border-white/10 text-white/50 hover:text-red-500 transition-all cursor-pointer uppercase tracking-wider">{cleanGreek('Trailer')}</a>
                   <button onClick={() => openInfoModal(i)} className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-blue-500/5 border border-blue-500/10 text-blue-400/70 hover:bg-blue-500 hover:text-black transition-all cursor-pointer uppercase tracking-wider">{cleanGreek('Info')}</button>
@@ -194,11 +183,11 @@ const sorted = Array.from(daysSet).sort((a, b) => {
       </div>
 
       <footer className="max-w-3xl mx-auto py-32 text-center relative z-10">
-        <div className="opacity-20 text-[10px] font-black tracking-[0.6em] mb-6">&copy; {new Date().getFullYear()} {cleanGreek('Cinema SKG')}</div>
+        <div className="opacity-20 text-[10px] font-black tracking-[0.6em] mb-6">© {new Date().getFullYear()} {cleanGreek('Cinema SKG')}</div>
         <a href="https://www.instagram.com/alli.mia.selida.gia.tainies/" target="_blank" rel="noopener" className="opacity-20 hover:opacity-100 hover:text-yellow-500 transition-all text-[11px] font-[900] tracking-widest uppercase border border-white/5 px-6 py-3 rounded-full hover:bg-white/5">alli mia selida gia tainies</a>
       </footer>
 
-      {/* MODAL (Unchanged layout for consistency) */}
+      {/* MODAL - ΕΠΑΝΑΦΟΡΑ ΣΕ screenshot_61 στυλ */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/95 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}>
           <button onClick={(e) => { e.stopPropagation(); navigateModal(-1); }} className="fixed left-4 md:left-10 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all z-[110] cursor-pointer">←</button>
@@ -214,11 +203,10 @@ const sorted = Array.from(daysSet).sort((a, b) => {
                 <p className="text-white font-[900] text-2xl tracking-tighter leading-none">{filteredMovies[currentIndex]?.schedule[selectedDay]}</p>
               </div>
 
-              {!modalLoading && tmdbInfo?.poster && (
-                <div className="w-full max-w-[260px] mx-auto mb-8 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl aspect-[2/3] relative">
-                    <img src={tmdbInfo.poster} alt="movie poster" className="absolute inset-0 w-full h-full object-cover"/>
-                </div>
-              )}
+              {/* ΧΡΗΣΗ ΤΗΣ m.image ΓΙΑ ΣΥΝΕΠΕΙΑ (ΟΠΩΣ screenshot_48) */}
+              <div className="w-full max-w-[260px] mx-auto mb-8 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl aspect-[2/3] relative">
+                  <img src={filteredMovies[currentIndex]?.image} alt="movie poster" className="absolute inset-0 w-full h-full object-cover"/>
+              </div>
 
               <h2 className="text-3xl md:text-4xl font-[900] text-yellow-500 mb-10 leading-tight tracking-tight italic text-center mx-auto max-w-[90%]">{filteredMovies[currentIndex]?.title}</h2>
               
@@ -230,23 +218,23 @@ const sorted = Array.from(daysSet).sort((a, b) => {
                 <div className="space-y-8 text-white/80 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-2 gap-y-8 gap-x-4 border-y border-white/5 py-8">
                         <div className="flex flex-col items-center text-center px-2">
-                           <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Βαθμολογια')}</span>
-                           <div className="flex items-center gap-1.5">
-                              <span className="text-yellow-500 text-lg">★</span>
-                              <span className="text-yellow-500 font-black text-xl leading-none">{tmdbInfo.rating}</span>
-                           </div>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Βαθμολογια')}</span>
+                            <div className="flex items-center gap-1.5">
+                               <span className="text-yellow-500 text-lg">★</span>
+                               <span className="text-yellow-500 font-black text-xl leading-none">{tmdbInfo.rating}</span>
+                            </div>
                         </div>
                         <div className="flex flex-col items-center text-center px-2 border-l border-white/5">
-                           <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ετος')}</span>
-                           <span className="font-bold text-white text-lg">{tmdbInfo.year}</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ετος')}</span>
+                            <span className="font-bold text-white text-lg">{tmdbInfo.year}</span>
                         </div>
                         <div className="flex flex-col items-center text-center px-2 border-t border-white/5 pt-8">
-                           <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Διαρκεια')}</span>
-                           <span className="font-bold text-white text-lg">{tmdbInfo.runtime}′</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Διαρκεια')}</span>
+                            <span className="font-bold text-white text-lg">{tmdbInfo.runtime}′</span>
                         </div>
                         <div className="flex flex-col items-center text-center px-2 border-l border-t border-white/5 pt-8">
-                           <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ειδος')}</span>
-                           <span className="font-medium text-white/90 text-[12px] leading-tight italic line-clamp-2">{tmdbInfo.genres}</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ειδος')}</span>
+                            <span className="font-medium text-white/90 text-[12px] leading-tight italic line-clamp-2">{tmdbInfo.genres}</span>
                         </div>
                   </div>
 

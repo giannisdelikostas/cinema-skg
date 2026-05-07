@@ -11,6 +11,26 @@ function toTitleCase(str) {
 }
 
 const cinemaData = {
+  'APOLLON': { 
+    name: 'ΑΠΟΛΛΩΝ', 
+    map: 'https://maps.app.goo.gl/apollon',
+    tickets: 'https://www.more.com/gr-el/tickets/cinemas/therina-cinema/apollon/'
+  },
+  'NATALI': { 
+    name: 'ΝΑΤΑΛΙ', 
+    map: 'https://maps.app.goo.gl/natali',
+    tickets: 'https://www.more.com/gr-el/tickets/cinemas/therina-cinema/natali/'
+  },
+  'ELLINIS': { 
+    name: 'ΕΛΛΗΝΙΣ', 
+    map: 'https://maps.app.goo.gl/ellinis',
+    tickets: 'https://www.more.com/gr-el/tickets/cinemas/therina-cinema/ellinis-1-2/'
+  },
+  'ALEX': { 
+    name: 'CINE ΑΛΕΞ', 
+    map: 'https://maps.app.goo.gl/alex',
+    tickets: 'https://www.more.com/gr-el/tickets/cinema/cine-alex-1/'
+  },
   'BAKOURA': { 
     name: 'ΒΑΚΟΥΡΑ', 
     map: 'https://www.google.com/maps/search/?api=1&query=Βακούρα+Κινηματογράφος+Θεσσαλονίκη',
@@ -35,6 +55,10 @@ const cinemaData = {
 
 export async function GET() {
   const cinemas = [
+    { id: 'APOLLON', url: 'https://www.thessalonikiguide.gr/cinemas/apollon/' },
+    { id: 'NATALI', url: 'https://www.thessalonikiguide.gr/cinemas/natali/' },
+    { id: 'ELLINIS', url: 'https://www.thessalonikiguide.gr/cinemas/ellinis/' },
+    { id: 'ALEX', url: 'https://www.thessalonikiguide.gr/cinemas/cine-alex/' },
     { id: 'BAKOURA', url: 'https://www.thessalonikiguide.gr/cinemas/vakoura/' },
     { id: 'MAKEDONIKON', url: 'https://www.thessalonikiguide.gr/cinemas/makedonikon/' },
     { id: 'KOLOSSAION', url: 'https://www.thessalonikiguide.gr/cinemas/kolossaion/' },
@@ -63,7 +87,6 @@ export async function GET() {
           image = image.replace(/-(\d+)x(\d+)\.(jpg|jpeg|png|webp)$/i, '.$3');
         }
 
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(title + ' ταινία')}`;
         const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(title + ' trailer ελληνικα')}`;
 
         let schedule = {};
@@ -90,12 +113,10 @@ export async function GET() {
         if (Object.keys(schedule).length > 0) {
           allMovies.push({
             cinema: cinemaData[cinema.id].name,
-            cinemaMap: cinemaData[cinema.id].map,
             ticketsUrl: cinemaData[cinema.id].tickets,
             title: title,
             image: image,
             schedule: schedule,
-            searchUrl: searchUrl,
             youtubeUrl: youtubeUrl
           });
         }
