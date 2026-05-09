@@ -73,11 +73,13 @@ export default function CinemaApp() {
 
   if (!hasMounted) return null;
 
-  const fetchTMDB = async (title) => {
+  // ΕΝΗΜΕΡΩΜΕΝΗ: Δέχεται όλο το movie object για να ελέγξει για ID
+  const fetchTMDB = async (movie) => {
     setModalLoading(true);
     setTmdbInfo(null);
     try {
-      const res = await fetch(`/api/tmdb?title=${encodeURIComponent(title)}`);
+      const query = movie.tmdbId ? `id=${movie.tmdbId}` : `title=${encodeURIComponent(movie.title)}`;
+      const res = await fetch(`/api/tmdb?${query}`);
       const data = await res.json();
       if (res.ok) setTmdbInfo(data);
       else setTmdbInfo({ error: true });
@@ -89,7 +91,7 @@ export default function CinemaApp() {
     setIsComingSoon(false);
     setCurrentIndex(index);
     setIsModalOpen(true);
-    fetchTMDB(filteredMovies[index].title);
+    fetchTMDB(filteredMovies[index]);
   };
 
   const openComingSoonModal = (index, poster) => {
@@ -97,7 +99,7 @@ export default function CinemaApp() {
     setCurrentIndex(index);
     setComingSoonData({ ...upcomingMovies[index], poster });
     setIsModalOpen(true);
-    fetchTMDB(upcomingMovies[index].title);
+    fetchTMDB(upcomingMovies[index]);
   };
 
   const navigateModal = (direction) => {
@@ -107,10 +109,7 @@ export default function CinemaApp() {
     if (newIndex >= list.length) newIndex = 0;
     
     setCurrentIndex(newIndex);
-    if (isComingSoon) {
-      setComingSoonData({ ...upcomingMovies[newIndex], poster: null }); // Το poster θα ανανεωθεί στο επόμενο fetch αν θες, αλλά εδώ το TMDB αρκεί
-    }
-    fetchTMDB(list[newIndex].title);
+    fetchTMDB(list[newIndex]);
   };
 
   const getCurrentCinemaLogo = (cinemaName) => cinemaTabs.find(tab => tab.name === cinemaName)?.logo || '';
@@ -186,10 +185,10 @@ export default function CinemaApp() {
                 </div>
                 <h3 onClick={() => openInfoModal(i)} className="font-[900] text-4xl leading-[1.1] group-hover:text-yellow-500 transition-colors duration-500 mb-8 cursor-pointer tracking-tight">{m.title}</h3>
                 <div className="flex flex-row justify-center md:justify-start items-center gap-2 md:gap-4 w-full">
-                  <a href={m.youtubeUrl} target="_blank" rel="noopener" className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-white/5 border border-white/10 text-white/50 hover:text-red-500 transition-all cursor-pointer uppercase tracking-wider uppercase">Trailer</a>
-                  <button onClick={() => openInfoModal(i)} className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-blue-500/5 border border-blue-500/10 text-blue-400/70 hover:bg-blue-500 hover:text-black transition-all cursor-pointer uppercase tracking-wider uppercase">Info</button>
+                  <a href={m.youtubeUrl} target="_blank" rel="noopener" className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-white/5 border border-white/10 text-white/50 hover:text-red-500 transition-all cursor-pointer uppercase tracking-wider">Trailer</a>
+                  <button onClick={() => openInfoModal(i)} className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-blue-500/5 border border-blue-500/10 text-blue-400/70 hover:bg-blue-500 hover:text-black transition-all cursor-pointer uppercase tracking-wider">Info</button>
                   {m.ticketsUrl && (
-                    <a href={m.ticketsUrl} target="_blank" rel="noopener" className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500 hover:text-black transition-all cursor-pointer uppercase tracking-wider uppercase shadow-[0_0_20px_rgba(34,197,94,0.1)]">Tickets</a>
+                    <a href={m.ticketsUrl} target="_blank" rel="noopener" className="flex-1 md:flex-none text-center px-2 md:px-7 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500 hover:text-black transition-all cursor-pointer uppercase tracking-wider shadow-[0_0_20px_rgba(34,197,94,0.1)]">Tickets</a>
                   )}
                 </div>
               </div>
@@ -247,36 +246,39 @@ export default function CinemaApp() {
                 <div className="space-y-8 text-white/80 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-2 gap-y-8 gap-x-4 border-y border-white/5 py-8">
                         <div className="flex flex-col items-center text-center px-2">
-                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2 uppercase">{cleanGreek('Βαθμολογια')}</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Βαθμολογια')}</span>
                             <div className="flex items-center gap-1.5">
                                <span className="text-yellow-500 text-lg">★</span>
-                               <span className="text-yellow-500 font-black text-xl leading-none italic uppercase">
+                               <span className="text-yellow-500 font-black text-xl leading-none italic">
                                  {tmdbInfo.rating && tmdbInfo.rating !== "-" ? tmdbInfo.rating : cleanGreek('TBD')}
                                </span>
                             </div>
                         </div>
                         <div className="flex flex-col items-center text-center px-2 border-l border-white/5">
-                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2 uppercase">{cleanGreek('Ετος')}</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ετος')}</span>
                             <span className="font-bold text-white text-lg italic">{tmdbInfo.year}</span>
                         </div>
                         <div className="flex flex-col items-center text-center px-2 border-t border-white/5 pt-8">
-                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2 uppercase">{cleanGreek('Διαρκεια')}</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Διαρκεια')}</span>
                             <span className="font-bold text-white text-lg italic">{tmdbInfo.runtime}′</span>
                         </div>
+                        {/* ΕΔΩ: Αφαίρεση cleanGreek από το tmdbInfo.genres */}
                         <div className="flex flex-col items-center text-center px-2 border-l border-t border-white/5 pt-8">
-                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2 uppercase">{cleanGreek('Ειδος')}</span>
-                            <span className="font-medium text-white/90 text-[12px] leading-tight italic line-clamp-2 uppercase">{cleanGreek(tmdbInfo.genres)}</span>
+                            <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ειδος')}</span>
+                            <span className="font-medium text-white/90 text-[12px] leading-tight italic line-clamp-2">{tmdbInfo.genres}</span>
                         </div>
                   </div>
 
+                  {/* ΕΔΩ: Αφαίρεση cleanGreek από το tmdbInfo.overview */}
                   <div className="bg-white/[0.02] p-7 rounded-[2.5rem] border border-white/5">
-                    <p className="text-yellow-500/40 uppercase text-[10px] font-black tracking-[0.3em] mb-4 text-center uppercase">{cleanGreek('Περιληψη')}</p>
-                    <p className="leading-relaxed text-[15px] text-white/80 font-medium italic text-center uppercase">"{tmdbInfo.overview}"</p>
+                    <p className="text-yellow-500/40 uppercase text-[10px] font-black tracking-[0.3em] mb-4 text-center">{cleanGreek('Περιληψη')}</p>
+                    <p className="leading-relaxed text-[15px] text-white/80 font-medium italic text-center">"{tmdbInfo.overview}"</p>
                   </div>
 
+                  {/* ΕΔΩ: Αφαίρεση cleanGreek από το tmdbInfo.cast */}
                   <div className="bg-white/[0.02] p-7 rounded-[2.5rem] border border-white/5">
-                    <p className="text-yellow-500/40 uppercase text-[10px] font-black tracking-[0.3em] mb-4 text-center uppercase">{cleanGreek('Πρωταγωνιστουν')}</p>
-                    <p className="text-[14px] text-white/70 font-semibold text-center uppercase italic">{cleanGreek(tmdbInfo.cast)}</p>
+                    <p className="text-yellow-500/40 uppercase text-[10px] font-black tracking-[0.3em] mb-4 text-center">{cleanGreek('Πρωταγωνιστουν')}</p>
+                    <p className="text-[14px] text-white/70 font-semibold text-center italic">{tmdbInfo.cast}</p>
                   </div>
                 </div>
               ) : null}

@@ -4,31 +4,43 @@ import { upcomingMovies } from '../../data/upcomingMovies';
 
 const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
   const [poster, setPoster] = useState(null);
-  const API_KEY = "9cc00684d688a9c71e678438c5ec854f"; 
 
   useEffect(() => {
-    fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(movie.title)}&language=el-GR`)
+    const query = movie.tmdbId ? `id=${movie.tmdbId}` : `title=${encodeURIComponent(movie.title)}`;
+    fetch(`/api/tmdb?${query}`)
       .then(res => res.json())
       .then(data => {
-        if (data.results && data.results[0]) {
-          setPoster(`https://image.tmdb.org/t/p/w500${data.results[0].poster_path}`);
+        if (data.poster) {
+          setPoster(data.poster);
         }
       })
       .catch(err => console.error("TMDB Error:", err));
-  }, [movie.title]);
+  }, [movie]);
 
+  // ΕΔΩ: Η ΛΙΣΤΑ ΜΕ ΤΗ ΜΙΚΡΗ ΑΦΙΣΑ
   if (viewType === 'list') {
     return (
       <div 
         onClick={() => onOpenModal(index, poster)}
-        className="flex justify-between items-center py-5 border-b border-white/5 hover:bg-white/[0.02] transition px-4 group cursor-pointer"
+        className="flex justify-between items-center py-3 border-b border-white/5 hover:bg-white/[0.03] transition px-4 group cursor-pointer rounded-xl"
       >
-        <span className="text-zinc-300 text-base md:text-lg font-medium group-hover:text-yellow-500 transition-colors italic">{movie.title}</span>
+        <div className="flex items-center gap-4">
+          {/* Μικρή Αφίσα στη Λίστα */}
+          <div className="w-10 h-14 bg-zinc-900 rounded-md overflow-hidden flex-shrink-0 border border-white/10">
+            {poster ? (
+              <img src={poster} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[6px] text-zinc-500 uppercase font-black text-center">...</div>
+            )}
+          </div>
+          <span className="text-zinc-300 text-base md:text-lg font-medium group-hover:text-yellow-500 transition-colors italic">{movie.title}</span>
+        </div>
         <span className="text-yellow-500 font-black text-sm bg-yellow-500/10 px-4 py-1 rounded-full italic tracking-tighter">{movie.date}</span>
       </div>
     );
   }
 
+  // ΕΔΩ: ΤΟ SLIDER (Παραμένει ακριβώς όπως το είχες)
   return (
     <div 
       onClick={() => onOpenModal(index, poster)}
@@ -54,8 +66,6 @@ const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
 export default function ComingSoon({ onOpenModal }) {
   const [viewMode, setViewMode] = useState('slider'); 
   const scrollRef = useRef(null);
-  
-  // Drag state
   const isDown = useRef(false);
   const startX = useRef(null);
   const scrollLeft = useRef(null);
@@ -69,19 +79,18 @@ export default function ComingSoon({ onOpenModal }) {
   };
 
   const handleMouseDown = (e) => {
+    if (viewMode === 'list') return;
     isDown.current = true;
     startX.current = e.pageX - scrollRef.current.offsetLeft;
     scrollLeft.current = scrollRef.current.scrollLeft;
   };
-
   const handleMouseLeave = () => { isDown.current = false; };
   const handleMouseUp = () => { isDown.current = false; };
-
   const handleMouseMove = (e) => {
-    if (!isDown.current) return;
+    if (!isDown.current || viewMode === 'list') return;
     e.preventDefault();
     const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX.current) * 2; // ταχύτητα
+    const walk = (x - startX.current) * 2;
     scrollRef.current.scrollLeft = scrollLeft.current - walk;
   };
 
@@ -94,7 +103,6 @@ export default function ComingSoon({ onOpenModal }) {
           </h2>
           <p className="text-white/20 text-[10px] font-black tracking-[0.4em] uppercase mt-2 italic">Οι μεγαλυτερες πρεμιερες του 2026</p>
         </div>
-        
         <div className="flex gap-1 bg-white/5 p-1.5 rounded-2xl border border-white/5 backdrop-blur-xl">
            <button onClick={() => setViewMode('slider')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all ${viewMode === 'slider' ? 'bg-yellow-500 text-black shadow-xl' : 'text-zinc-500 hover:text-white'}`}>SLIDER</button>
            <button onClick={() => setViewMode('list')} className={`px-6 py-2 rounded-xl text-[10px] font-black transition-all ${viewMode === 'list' ? 'bg-yellow-500 text-black shadow-xl' : 'text-zinc-500 hover:text-white'}`}>ΛΙΣΤΑ</button>
@@ -108,27 +116,21 @@ export default function ComingSoon({ onOpenModal }) {
             <button onClick={() => scroll('right')} className="absolute -right-4 md:-right-12 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/5 border border-white/10 hidden md:flex items-center justify-center hover:bg-yellow-500 hover:text-black transition-all z-20 shadow-2xl backdrop-blur-md opacity-0 group-hover/arrows:opacity-100">→</button>
           </>
         )}
-
-        {viewMode === 'slider' ? (
-          <div 
-            ref={scrollRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            className={`flex overflow-x-auto gap-8 pb-10 no-scrollbar snap-x scroll-smooth ${isDown.current ? 'cursor-grabbing' : 'cursor-grab'}`}
-          >
-            {upcomingMovies.map((movie, index) => (
-              <MovieCard key={movie.id} movie={movie} index={index} viewType="slider" onOpenModal={onOpenModal} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 animate-in fade-in duration-700">
-            {upcomingMovies.map((movie, index) => (
-              <MovieCard key={movie.id} movie={movie} index={index} viewType="list" onOpenModal={onOpenModal} />
-            ))}
-          </div>
-        )}
+        
+        {/* Δυναμική αλλαγή από flex slider σε grid λίστα */}
+        <div 
+          ref={scrollRef}
+          onMouseDown={handleMouseDown} onMouseLeave={handleMouseLeave} onMouseUp={handleMouseUp} onMouseMove={handleMouseMove}
+          className={`pb-10 no-scrollbar scroll-smooth ${
+            viewMode === 'slider' 
+              ? `flex overflow-x-auto gap-8 snap-x ${isDown.current ? 'cursor-grabbing' : 'cursor-grab'}` 
+              : 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2'
+          }`}
+        >
+          {upcomingMovies.map((movie, index) => (
+            <MovieCard key={movie.id || index} movie={movie} index={index} viewType={viewMode} onOpenModal={onOpenModal} />
+          ))}
+        </div>
       </div>
     </section>
   );
