@@ -1,6 +1,6 @@
 // data/upcomingMovies.js
 export const upcomingMovies = [
-  { id: 1, title: "Disclosure Day", date: "10/06" },
+  { id: 1, title: "Disclosure Day", date: "09/06" },
   { id: 2, title: "Toy Story 5", date: "18/06" },
   { id: 3, title: "How to Make a Killing", date: "18/06" },
   { id: 4, title: "Obsession", date: "18/06", tmdbId:1339713 },
