@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { upcomingMovies } from '../../data/upcomingMovies';
 
 const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
@@ -40,7 +40,7 @@ const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
     );
   }
 
-  // ΕΔΩ: ΤΟ SLIDER (Παραμένει ακριβώς όπως το είχες)
+  // ΕΔΩ: ΤΟ SLIDER
   return (
     <div 
       onClick={() => onOpenModal(index, poster)}
@@ -69,6 +69,22 @@ export default function ComingSoon({ onOpenModal }) {
   const isDown = useRef(false);
   const startX = useRef(null);
   const scrollLeft = useRef(null);
+
+  // Φιλτράρισμα ταινιών βάσει σημερινής ημερομηνίας
+  const visibleMovies = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+
+    return upcomingMovies
+      .map((movie, originalIndex) => ({ ...movie, originalIndex })) // Κρατάμε το σωστό index για το Modal
+      .filter(movie => {
+        const [day, month] = movie.date.split('/').map(Number);
+        const movieReleaseDate = new Date(currentYear, month - 1, day);
+        
+        return movieReleaseDate >= today; // Εμφάνιση μόνο αν είναι σήμερα ή στο μέλλον
+      });
+  }, []);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -117,7 +133,7 @@ export default function ComingSoon({ onOpenModal }) {
           </>
         )}
         
-        {/* Δυναμική αλλαγή από flex slider σε grid λίστα */}
+        {/* Χρήση της φιλτραρισμένης λίστας visibleMovies */}
         <div 
           ref={scrollRef}
           onMouseDown={handleMouseDown} onMouseLeave={handleMouseLeave} onMouseUp={handleMouseUp} onMouseMove={handleMouseMove}
@@ -127,8 +143,14 @@ export default function ComingSoon({ onOpenModal }) {
               : 'grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2'
           }`}
         >
-          {upcomingMovies.map((movie, index) => (
-            <MovieCard key={movie.id || index} movie={movie} index={index} viewType={viewMode} onOpenModal={onOpenModal} />
+          {visibleMovies.map((movie) => (
+            <MovieCard 
+              key={movie.id} 
+              movie={movie} 
+              index={movie.originalIndex} 
+              viewType={viewMode} 
+              onOpenModal={onOpenModal} 
+            />
           ))}
         </div>
       </div>
