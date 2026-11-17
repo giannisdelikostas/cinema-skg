@@ -79,6 +79,8 @@ export async function GET(request) {
         genres: details.genres?.map((g) => g.name).join(', ') || '-',
         cast: details.credits?.cast?.slice(0, 4).map((c) => c.name).join(', ') || '-',
         poster: details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
+        // Μεγαλύτερη έκδοση για το παράθυρο πληροφοριών (καθαρή και σε οθόνες κινητών υψηλής ανάλυσης).
+        posterHd: details.poster_path ? `https://image.tmdb.org/t/p/w780${details.poster_path}` : null,
       },
       // Η Vercel κρατάει την απάντηση για 1 μέρα, οπότε κάθε ταινία ζητιέται από το TMDB σπάνια.
       { headers: { 'Cache-Control': `public, s-maxage=${ONE_DAY}, stale-while-revalidate=${ONE_DAY}` } }
