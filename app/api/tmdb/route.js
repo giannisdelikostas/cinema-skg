@@ -1,49 +1,12 @@
 import { NextResponse } from 'next/server';
 
-// Το κλειδί ΔΕΝ μπαίνει πια στον κώδικα. Ορίζεται ως Environment Variable στη Vercel
-// (Settings → Environment Variables → TMDB_API_KEY) και σε αρχείο .env.local για τοπικά.
-const API_KEY = process.env.TMDB_API_KEY;
-const TMDB = 'https://api.themoviedb.org/3';
-const ONE_DAY = 60 * 60 * 24;
+import { ONE_DAY, findMovie, posterUrl, tmdb, tmdbConfigured } from '@/lib/tmdb';
 
-async function tmdb(path, params) {
-  const query = new URLSearchParams({ api_key: API_KEY, ...params });
-  const res = await fetch(`${TMDB}${path}?${query}`, { next: { revalidate: ONE_DAY } });
-  if (!res.ok) throw new Error(`TMDB ${res.status}`);
-  return res.json();
-}
-
-// Καθαρίζει έναν τίτλο για αναζήτηση, χωρίς να "κόβει" γράμματα μέσα σε λέξεις
-// (το παλιό /GR/gi έκανε το "Grease" σε "ease" και το split('-') το "Spider-Man" σε "Spider").
-function cleanPart(text) {
-  return text
-    .replace(/\b(GR|SUB|ENG)\b/gi, '')
-    .replace(/(^|\s)(μεταγλ|μεταγλωττισμένη|υποτ|υποτιτλισμένη)\.?(?=\s|$)/giu, ' ')
-    .split(/\s[-–—/|]\s/)[0] // μόνο διαχωριστικό με κενά γύρω του, όχι ενωτικό μέσα σε λέξη
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-// Οι τίτλοι της πηγής είναι συνήθως "Ελληνικός (Original)". Ψάχνουμε πρώτα τον
-// πρωτότυπο τίτλο (πιο αξιόπιστο στο TMDB) και μετά τον ελληνικό.
-function searchCandidates(title) {
-  const candidates = [];
-  const paren = title.match(/\(([^)]+)\)\s*$/);
-  if (paren) candidates.push(cleanPart(paren[1]));
-  candidates.push(cleanPart(title.replace(/\([^)]*\)/g, ' ')));
-  return [...new Set(candidates.filter((c) => c.length > 1))];
-}
-
-async function findMovieId(title) {
-  for (const query of searchCandidates(title)) {
-    const data = await tmdb('/search/movie', { query, include_adult: 'false', language: 'el-GR' });
-    if (data.results?.length) return data.results[0].id;
-  }
-  return null;
-}
+// Το κλειδί ΔΕΝ μπαίνει στον κώδικα: Environment Variable TMDB_API_KEY στη Vercel και .env.local τοπικά.
+// Η αναζήτηση και οι χειροκίνητες διορθώσεις (lib/tmdbOverrides.js) είναι στο lib/tmdb.js.
 
 export async function GET(request) {
-  if (!API_KEY) {
+  if (!tmdbConfigured()) {
     console.error('Λείπει το TMDB_API_KEY από τα Environment Variables');
     return NextResponse.json({ error: 'TMDB not configured' }, { status: 500 });
   }
@@ -53,7 +16,7 @@ export async function GET(request) {
   const id = searchParams.get('id');
 
   try {
-    const movieId = id || (title ? await findMovieId(title) : null);
+    const movieId = id || (title ? (await findMovie(title))?.id : null);
     if (!movieId) {
       return NextResponse.json({ error: 'Movie not found' }, { status: 404 });
     }
@@ -78,9 +41,9 @@ export async function GET(request) {
         runtime: details.runtime || '-',
         genres: details.genres?.map((g) => g.name).join(', ') || '-',
         cast: details.credits?.cast?.slice(0, 4).map((c) => c.name).join(', ') || '-',
-        poster: details.poster_path ? `https://image.tmdb.org/t/p/w500${details.poster_path}` : null,
+        poster: posterUrl(details.poster_path, 'w500'),
         // Μεγαλύτερη έκδοση για το παράθυρο πληροφοριών (καθαρή και σε οθόνες κινητών υψηλής ανάλυσης).
-        posterHd: details.poster_path ? `https://image.tmdb.org/t/p/w780${details.poster_path}` : null,
+        posterHd: posterUrl(details.poster_path, 'w780'),
       },
       // Η Vercel κρατάει την απάντηση για 1 μέρα, οπότε κάθε ταινία ζητιέται από το TMDB σπάνια.
       { headers: { 'Cache-Control': `public, s-maxage=${ONE_DAY}, stale-while-revalidate=${ONE_DAY}` } }
