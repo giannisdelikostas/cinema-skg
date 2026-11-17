@@ -1,20 +1,23 @@
 'use client';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { upcomingMovies } from '../../data/upcomingMovies';
 import { isoToShortDate } from '@/lib/dates';
 
 const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
-  const [poster, setPoster] = useState(null);
+  // Η αφίσα έρχεται έτοιμη από τον server (TMDB). Μόνο αν λείπει τη ζητάμε από το /api/tmdb.
+  const [fetchedPoster, setFetchedPoster] = useState(null);
+  const poster = movie.poster || fetchedPoster;
+  const dateLabel = movie.date ? isoToShortDate(movie.date) : 'ΣΥΝΤΟΜΑ';
 
   useEffect(() => {
+    if (movie.poster) return;
     const query = movie.tmdbId ? `id=${movie.tmdbId}` : `title=${encodeURIComponent(movie.title)}`;
     fetch(`/api/tmdb?${query}`)
       .then(res => res.json())
       .then(data => {
-        if (data.poster) setPoster(data.poster);
+        if (data.poster) setFetchedPoster(data.poster);
       })
       .catch(err => console.error("TMDB Error:", err));
-  }, [movie.tmdbId, movie.title]);
+  }, [movie.poster, movie.tmdbId, movie.title]);
 
   // ΕΔΩ: Η ΛΙΣΤΑ ΜΕ ΤΗ ΜΙΚΡΗ ΑΦΙΣΑ
   if (viewType === 'list') {
@@ -34,7 +37,7 @@ const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
           </div>
           <span className="text-zinc-300 text-base md:text-lg font-medium group-hover:text-yellow-500 transition-colors italic">{movie.title}</span>
         </div>
-        <span className="text-yellow-500 font-black text-sm bg-yellow-500/10 px-4 py-1 rounded-full italic tracking-tighter">{isoToShortDate(movie.date)}</span>
+        <span className="text-yellow-500 font-black text-sm bg-yellow-500/10 px-4 py-1 rounded-full italic tracking-tighter">{dateLabel}</span>
       </div>
     );
   }
@@ -43,10 +46,10 @@ const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
   return (
     <div 
       onClick={() => onOpenModal(index)}
-      className="min-w-[170px] md:min-w-[230px] flex flex-col gap-3 group snap-start pb-6 cursor-pointer select-none"
+      className="w-[170px] md:w-[230px] flex-shrink-0 flex flex-col gap-3 group snap-start pb-6 cursor-pointer select-none"
     >
       <span className="text-yellow-500 text-[11px] font-black tracking-widest uppercase bg-yellow-500/10 w-fit px-3 py-1 rounded-lg italic">
-        {isoToShortDate(movie.date)}
+        {dateLabel}
       </span>
       <div className="aspect-[2/3] w-full bg-zinc-900 rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl group-hover:border-yellow-500/50 transition-all duration-500 relative">
         {poster ? (
@@ -62,7 +65,7 @@ const MovieCard = ({ movie, index, viewType, onOpenModal }) => {
   );
 };
 
-export default function ComingSoon({ today, onOpenModal }) {
+export default function ComingSoon({ movies = [], today, onOpenModal }) {
   const [viewMode, setViewMode] = useState('slider'); 
   const scrollRef = useRef(null);
   const isDown = useRef(false);
@@ -71,9 +74,10 @@ export default function ComingSoon({ today, onOpenModal }) {
   const scrollLeft = useRef(null);
 
   // Μόνο οι ταινίες που δεν έχουν βγει ακόμα (σύγκριση πλήρους ημερομηνίας με έτος).
+  // Όσες δεν έχουν ημερομηνία ακόμα ("ΣΥΝΤΟΜΑ") φαίνονται πάντα, στο τέλος.
   const visibleMovies = useMemo(
-    () => upcomingMovies.filter((movie) => movie.date >= today),
-    [today]
+    () => movies.filter((movie) => !movie.date || movie.date >= today),
+    [movies, today]
   );
 
   const scroll = (direction) => {
@@ -100,6 +104,8 @@ export default function ComingSoon({ today, onOpenModal }) {
     const walk = (x - startX.current) * 2;
     scrollRef.current.scrollLeft = scrollLeft.current - walk;
   };
+
+  if (visibleMovies.length === 0) return null;
 
   return (
     <section id="coming-soon" className="mt-32 mb-20 px-6 max-w-7xl mx-auto scroll-mt-24 relative z-10">

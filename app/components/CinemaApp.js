@@ -23,7 +23,7 @@ const nameFor = (cinemaId) => CINEMAS.find((c) => c.id === cinemaId)?.name || ''
 // Οι ώρες μιας ταινίας για μια μέρα, π.χ. "18:00 · 21:15"
 const timesText = (slots) => (slots || []).map((s) => s.time).join(' · ');
 
-export default function CinemaApp({ movies, days, todayIso }) {
+export default function CinemaApp({ movies, days, todayIso, hotMovies = [] }) {
   // Η σελίδα μπορεί να έχει φτιαχτεί πριν από λίγη ώρα (cache). Στον browser
   // ξαναϋπολογίζουμε το "σήμερα", ώστε μετά τα μεσάνυχτα να κρυφτεί η χθεσινή μέρα.
   // (Στο πρώτο render χρησιμοποιείται το todayIso του server, για να μην υπάρχει hydration error.)
@@ -272,7 +272,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
         )}
       </div>
 
-      <ComingSoon today={today} onOpenModal={openComingSoonModal} />
+      <ComingSoon movies={hotMovies} today={today} onOpenModal={openComingSoonModal} />
 
       <footer className="max-w-3xl mx-auto py-32 text-center relative z-10">
         <div className="opacity-50 text-[10px] font-black tracking-[0.6em] mb-6 uppercase">© {today.slice(0, 4)} {cleanGreek('Cinema SKG')}</div>
@@ -303,7 +303,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
                 ) : (
                   <>
                     <p className="text-yellow-500 font-[900] tracking-[0.2em] italic text-[10px] leading-none mb-2 uppercase">Ημερομηνια Πρεμιερας</p>
-                    <p className="text-white font-[900] text-3xl tracking-tighter leading-none italic">{isoToShortDate(current.date)}</p>
+                    <p className="text-white font-[900] text-3xl tracking-tighter leading-none italic">{current.date ? isoToShortDate(current.date) : 'ΣΥΝΤΟΜΑ'}</p>
                   </>
                 )}
               </div>
