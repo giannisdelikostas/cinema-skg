@@ -309,8 +309,15 @@ export default function CinemaApp({ movies, days, todayIso }) {
               </div>
 
               <div className="w-full max-w-[260px] mx-auto mb-8 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl aspect-[2/3] relative bg-zinc-900">
-                {(modal.kind === 'soon' ? tmdbInfo?.poster : current.image) && (
-                  <img src={modal.kind === 'soon' ? tmdbInfo?.poster : current.image} alt={current.title} className="absolute inset-0 w-full h-full object-cover" />
+                {/* Οι αφίσες της πηγής είναι μικρές. Μόλις έρθει η αφίσα του TMDB (υψηλή ανάλυση) τη δείχνουμε
+                    από πάνω· μέχρι τότε (ή αν δεν βρεθεί) μένει η αρχική. */}
+                {modal.kind === 'now' && current.image && (
+                  <img src={current.image} alt={current.title} className="absolute inset-0 w-full h-full object-cover" />
+                )}
+                {!modalLoading && (tmdbInfo?.posterHd || tmdbInfo?.poster) && (
+                  <img key={tmdbInfo.posterHd || tmdbInfo.poster} src={tmdbInfo.posterHd || tmdbInfo.poster} alt={current.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-500"
+                    onLoad={(e) => e.currentTarget.classList.remove('opacity-0')} />
                 )}
               </div>
 
