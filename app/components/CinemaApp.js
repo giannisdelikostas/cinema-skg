@@ -156,17 +156,10 @@ export default function CinemaApp({ movies, days, todayIso }) {
       </header>
 
       <div className="max-w-4xl mx-auto mb-10 relative z-10">
-        <div className="flex overflow-x-auto gap-3 pb-4 no-scrollbar items-center">
-          {visibleDays.map((day) => (
-            <button key={day} onClick={() => setPickedDay(day)} aria-pressed={selectedDay === day}
-              className={`px-6 py-4 rounded-[1.5rem] text-[11px] font-[900] border transition-all whitespace-nowrap flex-shrink-0 cursor-pointer uppercase tracking-wider ${
-                selectedDay === day
-                  ? 'bg-yellow-500 border-yellow-500 text-black shadow-lg scale-105'
-                  : 'bg-white/5 border-white/10 text-white/50 hover:text-white/80'
-              }`}>{cleanGreek(isoToDayLabel(day))}</button>
-          ))}
+        <DayBar days={visibleDays} selectedDay={selectedDay} onSelect={setPickedDay} />
 
-          <a href="#coming-soon" className="px-6 py-4 rounded-[1.5rem] text-[11px] font-[900] bg-red-600 hover:bg-red-500 text-white transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-2 animate-pulse shadow-[0_0_20px_rgba(220,38,38,0.4)] uppercase tracking-widest italic border border-transparent">
+        <div className="flex justify-center mt-4">
+          <a href="#coming-soon" className="px-6 py-3 rounded-[1.5rem] text-[11px] font-[900] bg-red-600 hover:bg-red-500 text-white transition-all whitespace-nowrap flex items-center gap-2 animate-pulse shadow-[0_0_20px_rgba(220,38,38,0.4)] uppercase tracking-widest italic">
             🔥 HOT ΠΡΟΣΕΧΩΣ
           </a>
         </div>
@@ -349,6 +342,76 @@ function Showtimes({ slots, showHalls, className = '' }) {
           )}
         </span>
       ))}
+    </div>
+  );
+}
+
+// Η μπάρα με τις μέρες: κυλάει οριζόντια, με βελάκια που εμφανίζονται μόνο όταν
+// υπάρχουν κι άλλες μέρες προς εκείνη την κατεύθυνση.
+function DayBar({ days, selectedDay, onSelect }) {
+  const scroller = useRef(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const update = () => {
+      setCanLeft(el.scrollLeft > 4);
+      setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    el.addEventListener('scroll', update, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener('scroll', update);
+    };
+  }, [days.length]);
+
+  // Η επιλεγμένη μέρα έρχεται πάντα σε θέα (π.χ. όταν πατηθεί το "Επόμενες προβολές").
+  useEffect(() => {
+    scroller.current
+      ?.querySelector('[aria-pressed="true"]')
+      ?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+  }, [selectedDay]);
+
+  const scrollBy = (direction) => {
+    const el = scroller.current;
+    if (el) el.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: 'smooth' });
+  };
+
+  const arrow = 'absolute top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-zinc-900/90 border border-white/10 flex items-center justify-center text-white hover:bg-yellow-500 hover:text-black transition-all cursor-pointer shadow-2xl';
+
+  return (
+    <div className="relative">
+      {canLeft && (
+        <>
+          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#050505] to-transparent z-10" />
+          <button type="button" aria-label="Προηγούμενες μέρες" onClick={() => scrollBy(-1)} className={`${arrow} left-0`}>←</button>
+        </>
+      )}
+
+      <div ref={scroller} className="overflow-x-auto py-3 px-2 no-scrollbar scroll-smooth">
+        {/* w-max + mx-auto: στο κέντρο όταν χωράνε, κανονικό scroll όταν δεν χωράνε */}
+        <div className="flex gap-3 items-center w-max mx-auto">
+        {days.map((day) => (
+          <button key={day} onClick={() => onSelect(day)} aria-pressed={selectedDay === day}
+            className={`px-6 py-4 rounded-[1.5rem] text-[11px] font-[900] border transition-all whitespace-nowrap flex-shrink-0 cursor-pointer uppercase tracking-wider ${
+              selectedDay === day
+                ? 'bg-yellow-500 border-yellow-500 text-black shadow-lg scale-105'
+                : 'bg-white/5 border-white/10 text-white/50 hover:text-white/80'
+            }`}>{cleanGreek(isoToDayLabel(day))}</button>
+        ))}
+        </div>
+      </div>
+
+      {canRight && (
+        <>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#050505] to-transparent z-10" />
+          <button type="button" aria-label="Επόμενες μέρες" onClick={() => scrollBy(1)} className={`${arrow} right-0`}>→</button>
+        </>
+      )}
     </div>
   );
 }
