@@ -37,7 +37,10 @@ export default function CinemaApp({ movies, days, todayIso }) {
     [movies]
   );
   const [pickedTab, setPickedTab] = useState(null);
-  const activeTab = pickedTab ?? cinemasWithData[0]?.id;
+  // Αρχικά ανοίγει ο πρώτος κινηματογράφος που έχει προβολές τη μέρα που επιλέχθηκε.
+  const activeTab =
+    pickedTab ??
+    (cinemasWithData.find((c) => movies.some((m) => m.cinemaId === c.id && m.showtimes[selectedDay])) ?? cinemasWithData[0])?.id;
 
   const filteredMovies = useMemo(
     () =>
@@ -63,6 +66,15 @@ export default function CinemaApp({ movies, days, todayIso }) {
   }, [movies, activeTab]);
 
   const hasShowsOn = (cinemaId) => movies.some((m) => m.cinemaId === cinemaId && m.showtimes[selectedDay]);
+
+  // Αν ο κινηματογράφος δεν παίζει τη μέρα που επιλέχθηκε: ποια είναι η επόμενη μέρα με προβολές;
+  const nextDayForTab = useMemo(
+    () =>
+      visibleDays.find(
+        (d) => d > selectedDay && movies.some((m) => m.cinemaId === activeTab && m.showtimes[d])
+      ) ?? null,
+    [visibleDays, selectedDay, movies, activeTab]
+  );
 
   // ---------- Modal ----------
   // modal = { kind: 'now' | 'soon', list: [...], index }
@@ -215,10 +227,19 @@ export default function CinemaApp({ movies, days, todayIso }) {
             );
           })
         ) : (
-          <div className="text-center py-48 opacity-20 border-4 border-dashed border-white/5 rounded-[5rem] flex flex-col items-center gap-4">
-            <p className="text-5xl md:text-7xl font-[900] italic uppercase tracking-tighter">
-              {cleanGreek(movies.length ? 'Κλειστα' : 'Δεν υπαρχει προγραμμα')}
+          <div className="text-center py-32 md:py-40 border-4 border-dashed border-white/5 rounded-[5rem] flex flex-col items-center gap-8 px-6">
+            <p className="opacity-20 text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter">
+              {cleanGreek(!movies.length ? 'Δεν υπαρχει προγραμμα' : nextDayForTab ? (selectedDay === today ? 'Χωρις προβολες σημερα' : 'Χωρις προβολες αυτη τη μερα') : 'Κλειστα')}
             </p>
+            {nextDayForTab && (
+              <button
+                type="button"
+                onClick={() => setPickedDay(nextDayForTab)}
+                className="px-8 py-4 rounded-[1.5rem] text-[11px] font-[900] uppercase tracking-wider bg-yellow-500 text-black hover:bg-yellow-400 transition-all cursor-pointer shadow-lg"
+              >
+                {cleanGreek(`Επομενες προβολες: ${isoToDayLabel(nextDayForTab)}`)} →
+              </button>
+            )}
           </div>
         )}
       </div>
