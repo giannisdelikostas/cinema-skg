@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Cinema SKG
 
-## Getting Started
+Το πρόγραμμα των κινηματογράφων της Θεσσαλονίκης σε μία σελίδα — https://cinema-skg.vercel.app
 
-First, run the development server:
+## Ρύθμιση (μία φορά)
+
+Το κλειδί του TMDB δεν είναι πια μέσα στον κώδικα.
+
+1. **Vercel:** Project → Settings → Environment Variables → πρόσθεσε `TMDB_API_KEY` με το κλειδί σου (Production + Preview + Development) και κάνε Redeploy.
+2. **Τοπικά:** αντέγραψε το `.env.example` σε `.env.local` και βάλε το κλειδί εκεί. Το `.env.local` δεν ανεβαίνει στο GitHub.
+
+## Τοπική εκτέλεση
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Άνοιξε http://localhost:3000
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Πού είναι τι
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Αρχείο | Τι κάνει |
+| --- | --- |
+| `lib/cinemas.js` | Η λίστα κινηματογράφων (όνομα, logo, σελίδα πηγής, link εισιτηρίων). Εδώ προσθέτεις/αφαιρείς σινεμά. |
+| `lib/schedule.js` | Διαβάζει το πρόγραμμα από το thessalonikiguide.gr (παράλληλα, με cache 1 ώρας). |
+| `lib/dates.js` | Ημερομηνίες/ώρες (έτος, ταξινόμηση, μεταμεσονύχτιες προβολές). |
+| `app/page.js` | Φτιάχνει τη σελίδα στον server με έτοιμο το πρόγραμμα. |
+| `app/components/CinemaApp.js` | Το UI (μέρες, tabs, κάρτες, modal). |
+| `app/components/ComingSoon.js` | Η ενότητα «Προσεχώς». |
+| `data/upcomingMovies.js` | Οι ταινίες του «Προσεχώς». Ημερομηνίες σε μορφή `YYYY-MM-DD`. |
+| `app/api/tmdb/route.js` | Πληροφορίες ταινίας από το TMDB (cache 1 μέρας). |
+| `app/api/movies/route.js` | Το πρόγραμμα σε JSON, αν το χρειαστείς. |
