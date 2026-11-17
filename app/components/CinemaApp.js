@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import ComingSoon from './ComingSoon';
 import { CINEMAS } from '@/lib/cinemas';
-import { isoToDayLabel, isoToShortDate, timeSortKey, todayInAthens } from '@/lib/dates';
+import { athensNowKey, isoToDayLabel, isoToShortDate, timeSortKey, todayInAthens } from '@/lib/dates';
 
 const cleanGreek = (str) => {
   if (!str) return '';
@@ -10,6 +10,12 @@ const cleanGreek = (str) => {
 };
 
 const subscribeNoop = () => () => {};
+// Ενημέρωση της "τρέχουσας ώρας" κάθε 30", για να γκριζάρουν οι προβολές που ξεκίνησαν.
+const subscribeMinute = (callback) => {
+  const id = setInterval(callback, 30000);
+  return () => clearInterval(id);
+};
+const ALL = 'ALL';
 
 const logoFor = (cinemaId) => CINEMAS.find((c) => c.id === cinemaId)?.logo || '';
 const nameFor = (cinemaId) => CINEMAS.find((c) => c.id === cinemaId)?.name || '';
@@ -36,22 +42,21 @@ export default function CinemaApp({ movies, days, todayIso }) {
     () => CINEMAS.filter((c) => movies.some((m) => m.cinemaId === c.id)),
     [movies]
   );
+  // Το tab "ΟΛΑ" (όλοι οι κινηματογράφοι μαζί) είναι το προεπιλεγμένο.
   const [pickedTab, setPickedTab] = useState(null);
-  // Αρχικά ανοίγει ο πρώτος κινηματογράφος που έχει προβολές τη μέρα που επιλέχθηκε.
-  const activeTab =
-    pickedTab ??
-    (cinemasWithData.find((c) => movies.some((m) => m.cinemaId === c.id && m.showtimes[selectedDay])) ?? cinemasWithData[0])?.id;
+  const activeTab = pickedTab ?? ALL;
+  const isAll = activeTab === ALL;
 
   const filteredMovies = useMemo(
     () =>
       movies
-        .filter((m) => m.cinemaId === activeTab && m.showtimes[selectedDay])
+        .filter((m) => (isAll || m.cinemaId === activeTab) && m.showtimes[selectedDay])
         .sort(
           (a, b) =>
             timeSortKey(a.showtimes[selectedDay][0].time) - timeSortKey(b.showtimes[selectedDay][0].time) ||
             a.title.localeCompare(b.title, 'el')
         ),
-    [movies, activeTab, selectedDay]
+    [movies, activeTab, isAll, selectedDay]
   );
 
   // Δείχνουμε την αίθουσα μόνο όταν ο κινηματογράφος έχει πάνω από μία.
@@ -65,15 +70,30 @@ export default function CinemaApp({ movies, days, todayIso }) {
     return halls.size > 1;
   }, [movies, activeTab]);
 
+  // Για το "ΟΛΑ": κάθε προβολή χωριστά, ταξινομημένες κατά ώρα.
+  // Όσες έχουν ήδη ξεκινήσει σήμερα πάνε στο τέλος, γκριζαρισμένες.
+  const nowKey = useSyncExternalStore(subscribeMinute, athensNowKey, () => null);
+  const screenings = useMemo(() => {
+    if (!isAll) return { upcoming: [], started: [] };
+    const all = filteredMovies
+      .flatMap((movie) => movie.showtimes[selectedDay].map((slot) => ({ movie, slot })))
+      .sort(
+        (a, b) =>
+          timeSortKey(a.slot.time) - timeSortKey(b.slot.time) || a.movie.cinema.localeCompare(b.movie.cinema, 'el')
+      );
+    const hasStarted = (e) => selectedDay === today && nowKey !== null && timeSortKey(e.slot.time) < nowKey;
+    return { upcoming: all.filter((e) => !hasStarted(e)), started: all.filter(hasStarted) };
+  }, [isAll, filteredMovies, selectedDay, today, nowKey]);
+
   const hasShowsOn = (cinemaId) => movies.some((m) => m.cinemaId === cinemaId && m.showtimes[selectedDay]);
 
   // Αν ο κινηματογράφος δεν παίζει τη μέρα που επιλέχθηκε: ποια είναι η επόμενη μέρα με προβολές;
   const nextDayForTab = useMemo(
     () =>
       visibleDays.find(
-        (d) => d > selectedDay && movies.some((m) => m.cinemaId === activeTab && m.showtimes[d])
+        (d) => d > selectedDay && movies.some((m) => (isAll || m.cinemaId === activeTab) && m.showtimes[d])
       ) ?? null,
-    [visibleDays, selectedDay, movies, activeTab]
+    [visibleDays, selectedDay, movies, activeTab, isAll]
   );
 
   // ---------- Modal ----------
@@ -139,6 +159,12 @@ export default function CinemaApp({ movies, days, todayIso }) {
   }, [modal, closeModal, navigateModal]);
 
   const openInfoModal = (index) => openModal('now', filteredMovies, index);
+  const openInfoForMovie = (movie) => {
+    const list = isAll
+      ? [...new Map([...screenings.upcoming, ...screenings.started].map((e) => [e.movie.id, e.movie])).values()]
+      : filteredMovies;
+    openModal('now', list, Math.max(0, list.findIndex((m) => m.id === movie.id)));
+  };
   const openComingSoonModal = (list, index) => openModal('soon', list, index);
 
   const current = modal ? modal.list[modal.index] : null;
@@ -150,7 +176,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
       <header className="max-w-3xl mx-auto py-16 md:py-24 border-b border-white/5 mb-12 text-center relative z-10">
         <h1 className="text-6xl md:text-8xl font-[900] text-yellow-500 italic tracking-tighter mb-4 uppercase">{cleanGreek('Cinema SKG')}</h1>
         <p className="text-white/50 text-[10px] md:text-[12px] tracking-[0.4em] font-bold mb-2 uppercase">{cleanGreek('Ολη η Θεσσαλονικη στη μεγαλη οθονη')}</p>
-        <p className="text-white/40 text-[10px] tracking-[0.2em] font-medium italic">
+        <p className="text-white/60 text-[10px] tracking-[0.2em] font-medium italic">
           by <a href="https://www.instagram.com/alli.mia.selida.gia.tainies/" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-yellow-500 transition-all underline decoration-yellow-500/20 underline-offset-8 cursor-pointer">alli mia selida gia tainies</a>
         </p>
       </header>
@@ -166,6 +192,13 @@ export default function CinemaApp({ movies, days, todayIso }) {
       </div>
 
       <div className="max-w-5xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-2 mb-16 bg-white/5 backdrop-blur-2xl border border-white/10 p-2 rounded-[2.5rem] md:rounded-full relative z-10">
+        <button onClick={() => setPickedTab(ALL)} aria-pressed={isAll}
+          className={`py-4 px-6 rounded-full text-[10px] font-[900] tracking-[0.15em] transition-all flex items-center justify-center md:justify-start gap-3 cursor-pointer uppercase ${
+            isAll ? 'bg-white/10 text-yellow-500 shadow-xl border border-white/10' : 'text-white/60 hover:text-white/80 border border-transparent'
+          }`}>
+          <span aria-hidden="true" className="w-8 h-8 rounded-full border border-white/10 bg-yellow-500/10 flex items-center justify-center text-sm">🎬</span>
+          <span>{cleanGreek('Ολα')}</span>
+        </button>
         {cinemasWithData.map((tab) => {
           const hasShows = hasShowsOn(tab.id);
           return (
@@ -173,7 +206,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
               className={`py-4 px-6 rounded-full text-[10px] font-[900] tracking-[0.15em] transition-all flex items-center justify-center md:justify-start gap-3 cursor-pointer uppercase ${
                 activeTab === tab.id
                   ? 'bg-white/10 text-yellow-500 shadow-xl border border-white/10'
-                  : `${hasShows ? 'text-white/50' : 'text-white/20'} hover:text-white/70 border border-transparent`
+                  : `${hasShows ? 'text-white/60' : 'text-white/35'} hover:text-white/80 border border-transparent`
               }`}>
               <img src={tab.logo} alt="" className={`w-8 h-8 rounded-full object-cover border border-white/10 ${hasShows ? '' : 'opacity-40'}`} />
               <span>{cleanGreek(tab.name)}</span>
@@ -183,7 +216,9 @@ export default function CinemaApp({ movies, days, todayIso }) {
       </div>
 
       <div className="max-w-3xl mx-auto space-y-8 relative z-10">
-        {filteredMovies.length > 0 ? (
+        {filteredMovies.length > 0 && isAll ? (
+          <AllScreenings screenings={screenings} onInfo={openInfoForMovie} />
+        ) : filteredMovies.length > 0 ? (
           filteredMovies.map((m, i) => {
             const slots = m.showtimes[selectedDay];
             return (
@@ -221,7 +256,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
           })
         ) : (
           <div className="text-center py-32 md:py-40 border-4 border-dashed border-white/5 rounded-[5rem] flex flex-col items-center gap-8 px-6">
-            <p className="opacity-20 text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter">
+            <p className="opacity-40 text-4xl md:text-6xl font-[900] italic uppercase tracking-tighter">
               {cleanGreek(!movies.length ? 'Δεν υπαρχει προγραμμα' : nextDayForTab ? (selectedDay === today ? 'Χωρις προβολες σημερα' : 'Χωρις προβολες αυτη τη μερα') : 'Κλειστα')}
             </p>
             {nextDayForTab && (
@@ -240,7 +275,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
       <ComingSoon today={today} onOpenModal={openComingSoonModal} />
 
       <footer className="max-w-3xl mx-auto py-32 text-center relative z-10">
-        <div className="opacity-30 text-[10px] font-black tracking-[0.6em] mb-6 uppercase">© {today.slice(0, 4)} {cleanGreek('Cinema SKG')}</div>
+        <div className="opacity-50 text-[10px] font-black tracking-[0.6em] mb-6 uppercase">© {today.slice(0, 4)} {cleanGreek('Cinema SKG')}</div>
         <a href="https://www.instagram.com/alli.mia.selida.gia.tainies/" target="_blank" rel="noopener noreferrer" className="opacity-40 hover:opacity-100 hover:text-yellow-500 transition-all text-[11px] font-[900] tracking-widest uppercase border border-white/5 px-6 py-3 rounded-full hover:bg-white/5">alli mia selida gia tainies</a>
       </footer>
 
@@ -282,14 +317,14 @@ export default function CinemaApp({ movies, days, todayIso }) {
               <h2 className="text-3xl md:text-4xl font-[900] text-yellow-500 mb-10 leading-tight tracking-tight italic text-center mx-auto max-w-[90%]">{current.title}</h2>
 
               {modalLoading ? (
-                <div className="py-24 text-center text-white/30 animate-pulse text-[11px] font-black tracking-[0.5em] uppercase">{cleanGreek('Φορτωση...')}</div>
+                <div className="py-24 text-center text-white/50 animate-pulse text-[11px] font-black tracking-[0.5em] uppercase">{cleanGreek('Φορτωση...')}</div>
               ) : tmdbInfo?.error ? (
                 <div className="py-24 text-center text-red-400/60 text-[11px] font-black tracking-[0.5em] border border-red-500/10 rounded-[2rem] uppercase">{cleanGreek('Δεν βρεθηκαν πληροφοριες')}</div>
               ) : tmdbInfo ? (
                 <div className="space-y-8 text-white/80 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-2 gap-y-8 gap-x-4 border-y border-white/5 py-8">
                     <div className="flex flex-col items-center text-center px-2">
-                      <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Βαθμολογια')}</span>
+                      <span className="text-white/70 uppercase text-[10px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Βαθμολογια')}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="text-yellow-500 text-lg">★</span>
                         <span className="text-yellow-500 font-black text-xl leading-none italic">
@@ -298,15 +333,15 @@ export default function CinemaApp({ movies, days, todayIso }) {
                       </div>
                     </div>
                     <div className="flex flex-col items-center text-center px-2 border-l border-white/5">
-                      <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ετος')}</span>
+                      <span className="text-white/70 uppercase text-[10px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ετος')}</span>
                       <span className="font-bold text-white text-lg italic">{tmdbInfo.year}</span>
                     </div>
                     <div className="flex flex-col items-center text-center px-2 border-t border-white/5 pt-8">
-                      <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Διαρκεια')}</span>
+                      <span className="text-white/70 uppercase text-[10px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Διαρκεια')}</span>
                       <span className="font-bold text-white text-lg italic">{tmdbInfo.runtime}′</span>
                     </div>
                     <div className="flex flex-col items-center text-center px-2 border-l border-t border-white/5 pt-8">
-                      <span className="text-white/60 uppercase text-[9px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ειδος')}</span>
+                      <span className="text-white/70 uppercase text-[10px] font-[900] tracking-[0.15em] mb-2">{cleanGreek('Ειδος')}</span>
                       <span className="font-medium text-white/90 text-[12px] leading-tight italic line-clamp-2">{tmdbInfo.genres}</span>
                     </div>
                   </div>
@@ -338,7 +373,7 @@ function Showtimes({ slots, showHalls, className = '' }) {
         <span key={`${s.time}-${idx}`} className="text-white font-[900] tracking-tighter leading-none whitespace-nowrap">
           {s.time}
           {showHalls && s.hall && (
-            <span className="ml-1.5 text-[10px] font-bold tracking-wider text-white/40 align-middle">{s.hall.replace('Αίθουσα', 'ΑΙΘ.')}</span>
+            <span className="ml-1.5 text-[10px] font-bold tracking-wider text-white/60 align-middle">{s.hall.replace('Αίθουσα', 'ΑΙΘ.')}</span>
           )}
         </span>
       ))}
@@ -411,6 +446,68 @@ function DayBar({ days, selectedDay, onSelect }) {
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#050505] to-transparent z-10" />
           <button type="button" aria-label="Επόμενες μέρες" onClick={() => scrollBy(1)} className={`${arrow} right-0`}>→</button>
         </>
+      )}
+    </div>
+  );
+}
+
+// Προβολή "ΟΛΑ": όλες οι προβολές της μέρας από όλους τους κινηματογράφους, κατά ώρα.
+function AllScreenings({ screenings, onInfo }) {
+  const { upcoming, started } = screenings;
+  return (
+    <div className="space-y-3">
+      {upcoming.map((e, i) => (
+        <ScreeningRow key={`u-${e.movie.id}-${e.slot.time}-${i}`} entry={e} onInfo={onInfo} />
+      ))}
+      {started.length > 0 && (
+        <>
+          <p className="pt-8 pb-2 text-center text-[11px] font-[900] tracking-[0.3em] uppercase text-white/50">
+            {cleanGreek('Εχουν ηδη ξεκινησει')}
+          </p>
+          {started.map((e, i) => (
+            <ScreeningRow key={`s-${e.movie.id}-${e.slot.time}-${i}`} entry={e} onInfo={onInfo} started />
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function ScreeningRow({ entry, onInfo, started = false }) {
+  const { movie: m, slot } = entry;
+  return (
+    <div className={`group flex items-center gap-4 md:gap-6 bg-white/[0.02] border border-white/10 p-3 md:p-4 rounded-[2rem] hover:bg-white/[0.05] transition-all ${started ? 'opacity-40 grayscale' : ''}`}>
+      <div className="w-16 md:w-24 flex-shrink-0 text-center">
+        <p className={`font-[900] tracking-tighter leading-none text-2xl md:text-4xl ${started ? 'text-white' : 'text-yellow-500'}`}>{slot.time}</p>
+        {started && <p className="mt-1 text-[9px] font-black tracking-widest text-white/70 uppercase">{cleanGreek('Ξεκινησε')}</p>}
+      </div>
+
+      <button type="button" aria-label={`Πληροφορίες για ${m.title}`} onClick={() => onInfo(m)}
+        className="w-14 h-20 md:w-16 md:h-24 bg-zinc-900 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 cursor-pointer">
+        {m.image && <img src={m.image} loading="lazy" alt={m.title} className="w-full h-full object-cover" />}
+      </button>
+
+      <div className="flex-grow min-w-0">
+        <button type="button" onClick={() => onInfo(m)}
+          className="block text-left font-[900] text-base md:text-xl leading-tight tracking-tight group-hover:text-yellow-500 transition-colors cursor-pointer">
+          {m.title}
+        </button>
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <img src={logoFor(m.cinemaId)} alt="" className="w-5 h-5 rounded-full object-cover border border-white/10" />
+          <span className="text-[10px] font-black text-yellow-500/90 tracking-[0.2em] uppercase">{cleanGreek(m.cinema)}</span>
+          {slot.hall && <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">· {cleanGreek(slot.hall)}</span>}
+        </div>
+      </div>
+
+      <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+        <a href={m.youtubeUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 rounded-xl text-[10px] font-black bg-white/5 border border-white/10 text-white/70 hover:text-red-500 transition-all uppercase tracking-wider">Trailer</a>
+        {m.ticketsUrl && (
+          <a href={m.ticketsUrl} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 rounded-xl text-[10px] font-black bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500 hover:text-black transition-all uppercase tracking-wider">Tickets</a>
+        )}
+      </div>
+      {m.ticketsUrl && (
+        <a href={m.ticketsUrl} target="_blank" rel="noopener noreferrer" aria-label="Εισιτήρια"
+          className="sm:hidden flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 flex items-center justify-center">🎟</a>
       )}
     </div>
   );
