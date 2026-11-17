@@ -230,7 +230,7 @@ export default function CinemaApp({ movies, days, todayIso }) {
                 </div>
                 <button type="button" aria-label={`Πληροφορίες για ${m.title}`} onClick={() => openInfoModal(i)}
                   className="w-48 h-64 md:w-52 md:h-72 bg-zinc-900 rounded-[2.5rem] md:rounded-[3rem] overflow-hidden flex-shrink-0 shadow-2xl relative border border-white/10 cursor-pointer">
-                  {m.image && <img src={m.image} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-all duration-[1.5s]" alt={m.title} />}
+                  {(m.poster || m.image) && <img src={m.poster || m.image} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-all duration-[1.5s]" alt={m.title} />}
                 </button>
                 <div className="flex-grow text-center md:text-left w-full">
                   <div className="hidden md:flex items-center gap-4 mb-6 bg-white/5 p-5 rounded-full border border-white/5 max-w-fit mx-auto md:mx-0">
@@ -311,8 +311,8 @@ export default function CinemaApp({ movies, days, todayIso }) {
               <div className="w-full max-w-[260px] mx-auto mb-8 rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl aspect-[2/3] relative bg-zinc-900">
                 {/* Οι αφίσες της πηγής είναι μικρές. Μόλις έρθει η αφίσα του TMDB (υψηλή ανάλυση) τη δείχνουμε
                     από πάνω· μέχρι τότε (ή αν δεν βρεθεί) μένει η αρχική. */}
-                {modal.kind === 'now' && current.image && (
-                  <img src={current.image} alt={current.title} className="absolute inset-0 w-full h-full object-cover" />
+                {modal.kind === 'now' && (current.poster || current.image) && (
+                  <img src={current.poster || current.image} alt={current.title} className="absolute inset-0 w-full h-full object-cover" />
                 )}
                 {!modalLoading && (tmdbInfo?.posterHd || tmdbInfo?.poster) && (
                   <img key={tmdbInfo.posterHd || tmdbInfo.poster} src={tmdbInfo.posterHd || tmdbInfo.poster} alt={current.title}
@@ -491,7 +491,7 @@ function ScreeningRow({ entry, onInfo, started = false }) {
 
       <button type="button" aria-label={`Πληροφορίες για ${m.title}`} onClick={() => onInfo(m)}
         className="w-14 h-20 md:w-16 md:h-24 bg-zinc-900 rounded-xl overflow-hidden flex-shrink-0 border border-white/10 cursor-pointer">
-        {m.image && <img src={m.image} loading="lazy" alt={m.title} className="w-full h-full object-cover" />}
+        {(m.posterThumb || m.image) && <img src={m.posterThumb || m.image} loading="lazy" alt={m.title} className="w-full h-full object-cover" />}
       </button>
 
       <div className="flex-grow min-w-0">
